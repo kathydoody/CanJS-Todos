@@ -1,0 +1,20 @@
+<ul id="todo-list">
+    {{ #each todos }}
+        <li class="todo {{#if completed}} completed {{/if}}
+                        {{#if editing}} editing {{/if}}">
+
+            <div class="view">
+                <input class="toggle" type="checkbox" can-value="completed">
+                <label can-click="editTodo"> {{ name }} </label>
+                <button class="destroy" can-click="destroy"></button>
+            </div>
+
+            <input class="edit"
+                type="text"
+                value="{{name}}"
+                can-blur='updateTodo'
+                can-enter='updateTodo'>
+
+        </li>
+    {{ /each }}
+</ul>
