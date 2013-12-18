@@ -44,7 +44,7 @@
 
                 </ul>
 
-                <button id="clear-completed">
+                <button id="clear-completed" can-click="removeComplete">
                 Clear completed ({{todos.completedCount}})
                 </button>
 
@@ -160,7 +160,7 @@
             template: '<input id="new-todo" placeholder="What needs to be done?" can-enter="createTodo" autofocus="">',
 
             scope: {
-                createTodo: function(context, el,ev){
+                createTodo: function(context, el, ev){
                     if(el.val) {
                         new Todo({
                             completed: false,
@@ -192,6 +192,7 @@
 
             scope: {
                 todos: new Todo.List({}),
+
                 displayedTodos: function(){
                     var filter = can.route.attr("filter"),
                         todos = this.attr("todos");
@@ -202,6 +203,23 @@
                         return todos.completed();
                     }
                     return todos;
+                },
+
+                /* This will remove the elements from the list but not
+                *  from the server - that would require using the destroy
+                *  method
+                *  */
+                removeComplete : function(){
+                    console.log("remove the finished");
+
+                    var completedTodos = this.attr("todos").completed();
+                    var allTodos = this.attr("todos");
+
+                    completedTodos.forEach(function(el, ind, list){
+                      allTodos.splice(ind,1);
+                    })
+
+
                 }
             },
             helpers: {
