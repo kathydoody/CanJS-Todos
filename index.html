@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kathy's CanJs 2.0 ToDos</title>
+
+    <link rel="stylesheet" type="text/css" href="app.css"/>
+
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script src="//canjs.com/release/2.0.3/can.jquery.js"></script>
+    <script src="//canjs.com/release/2.0.3/can.object.js"></script>
+    <script src="//canjs.com/release/2.0.3/can.fixture.js"></script>
+</head>
+<body>
+
+    <script type="text/mustache" id="app-template">
+      <todos-app>
+          <section id="todoapp">
+
+            <header id="header">
+                <h1>todos</h1>
+             <!--   <input id="new-todo" placeholder="What needs to be done?" autofocus="">  replaced by todos-create-->
+                <todos-create></todos-create>
+            </header>
+
+              <section id="main">
+
+                <input id="toggle-all" type="checkbox">
+                <label for="toggle-all">Mark all as complete</label>
+
+                <todos-list todos="displayedTodos"></todos-list>
+
+              </section>
+
+              <footer id="footer" class="">
+                <span id="todo-count">
+                    <strong>{{todos.activeCount}}</strong>
+                    {{plural "item" todos.activeCount}} left
+                </span>
+                <ul id="filters">
+
+                    <li>{{{filterLink "All" undefined}}}</li>
+                    <li>{{{filterLink "Active" "active"}}}</li>
+                    <li>{{{filterLink "Completed" "completed"}}}</li>
+
+                </ul>
+
+                <button id="clear-completed">
+                Clear completed ({{todos.completedCount}})
+                </button>
+
+              </footer>
+
+          </section>
+      </todos-app>
+    </script>
+
+    <script type="text/mustache" id="todos-list-template">
+         <ul id="todo-list">
+                {{ #each todos }}
+                    <li class="todo {{#if completed}} completed {{/if}}
+                                    {{#if editing}} editing {{/if}}">
+                        <div class="view">
+                            <input class="toggle" type="checkbox" can-value="completed">
+                            <label can-click="editTodo"> {{ name }} </label>
+                            <button class="destroy" can-click="destroy"></button>
+                        </div>
+                        <input class="edit"
+                               type="text"
+                               value="{{name}}"
+                               can-blur='updateTodo'
+                               can-enter='updateTodo'>
+                    </li>
+                {{ /each }}
+            </ul>
+    </script>
+
+    <div id="app"></div>
+
+    <script>
+
+        can.fixture({
+            "GET /services/todos": function(){
+                return [
+                    {name:"Feed the dogs", completed: true, id:1},
+                    {name:"Play hockey", completed: false, id:2},
+                    {name:"Learn CanJs", completed: false, id:3}
+                ]
+            },
+
+            "Delete /services/todos/{id}": function(){
+                return{};
+            },
+
+            "POST /services/todos": function(){
+                console.log("you just created a new todo");
+                return {id: Math.random()}
+            },
+
+            "PUT /services/todos/{id}": function(){
+                console.log("you just updated the todo");
+                return {};
+            }
+
+        });
+
+
+      //  can.fixture.delay = 2000;  will hold the data back for 2 seconds
+
+
+        Todo = can.Model.extend({
+            findAll: "/services/todos",
+            create: "/services/todos",
+            destroy: "/services/todos/{id}",
+            update: "/services/todos/{id}"
+        },{});
+
+
+        /*  extend the regular List object created by Model and add
+        any helper functions you want*/
+
+        Todo.List = Todo.List.extend({
+            filter: function(check){
+                var list = new this.constructor;  // could use Todo.List but better to use this
+                                                  // so you can change Todo and still inherit here
+
+                this.each(function(todo){
+                    if(check(todo)){
+                        list.push(todo)
+                    }
+                });
+
+                return list;
+            },
+
+            active: function(){
+                return this.filter(function(todo){
+                    return !todo.attr("completed");
+                });
+            },
+
+            completed: function(){
+                return this.filter(function(todo){
+                    return todo.attr("completed");
+                });
+            },
+
+            activeCount: function(){
+                return this.active().attr("length");
+            },
+
+            completedCount: function(){
+                return this.completed().attr("length");
+            }
+
+        });
+
+
+        can.Component.extend({
+            tag: "todos-create",
+            template: '<input id="new-todo" placeholder="What needs to be done?" can-enter="createTodo" autofocus="">',
+
+            scope: {
+                createTodo: function(context, el,ev){
+                    if(el.val) {
+                        new Todo({
+                            completed: false,
+                            name: el.val()
+                        }).save();
+                        el.val("");
+                    }
+                }
+            }
+        });
+
+        can.Component.extend({
+            tag: "todos-list",
+            template: can.view("todos-list-template"),
+            scope: {
+                editTodo: function(todo){
+                    todo.attr("editing", true);
+                },
+                updateTodo: function(todo, el){
+                    todo.removeAttr("editing");
+                    todo.attr("name", el.val());
+                    todo.save();
+                }
+            }
+        });
+
+        can.Component.extend({
+            tag: "todos-app",
+
+            scope: {
+                todos: new Todo.List({}),
+                displayedTodos: function(){
+                    var filter = can.route.attr("filter"),
+                        todos = this.attr("todos");
+
+                    if(filter === "active"){
+                        return todos.active();
+                    } else if(filter === "completed"){
+                        return todos.completed();
+                    }
+                    return todos;
+                }
+            },
+            helpers: {
+                filterLink: function(text, filterValue){
+
+                    var attrs = {};
+                    if(filterValue){
+                        attrs.filter = filterValue;
+                    }
+                    return can.route.link(text, attrs, {
+                        className: can.route.attr("filter") === filterValue ? "selected" : ""
+                    });
+                },
+                plural: function(singular, count){
+                    var value = count();
+                    if(value ===1){
+                        return singular;
+                    } else {
+                        return singular+"s";
+                    }
+
+                }
+            },
+
+            events: {
+                "{Todo} created": function(Todo, ev, newTodo){
+                    this.scope.attr("todos").push(newTodo);
+                }
+            }
+        });
+
+
+
+
+        /*
+        * This creates a new empty list the automatically makes the
+        * FindAll ajax call defined in the model definition above
+        * */
+        //var todos = new Todo.List({});  - this is now in the todos-app component
+
+        can.route(":filter");  // makes a pretty url
+        can.route.ready();
+
+        var frag = can.view("app-template", {});
+
+        $("#app").html(frag);
+
+       /*
+        This was version 1. it used findAll on the model and the code
+        to provide the todos and compute wer in the callback.  This is
+        replaced by using the model's .List function which calls findAll
+        on the model
+
+        Todo.findAll({}, function(todos){
+
+            var itemsLeft = can.compute(function(){
+                var count = 0;
+                todos.each(function(todo){
+                    if(!todo.attr("completed")){
+                        count++;
+                    }
+                })
+                return count;
+            })
+
+            var frag = can.view("app-template", {
+                todos: todos,
+                itemsLeft: itemsLeft
+            });
+
+            $("#app").html(frag);
+
+        })*/
+
+
+
+
+    </script>
+</body>
+</html>
