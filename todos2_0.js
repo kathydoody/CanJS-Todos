@@ -1,5 +1,9 @@
 /**
  * Created by kathydoody on 12/18/13.
+ *
+ * Based on Justin's V2.o Todo meetup
+ *
+ *
  */
 
 
@@ -144,11 +148,10 @@ can.Component.extend({
                 console.log("item: ")
                 allTodos.splice(ind, 1);
             })
-
-
         }
     },
-    helpers: {
+    helpers: {  // these are to be used in the hbs templates
+
         filterLink: function (text, filterValue) {
 
             var attrs = {};
@@ -178,12 +181,6 @@ can.Component.extend({
 });
 
 
-/*
- * This creates a new empty list the automatically makes the
- * FindAll ajax call defined in the model definition above
- * */
-//var todos = new Todo.List({});  - this is now in the todos-app component
-
 can.route(":filter");  // makes a pretty url
 can.route.ready();
 
@@ -191,31 +188,4 @@ var frag = can.view("templates/main-app.hbs", {});
 
 $("#app").html(frag);
 
-
-/*
- This was version 1. it used findAll on the model and the code
- to provide the todos and compute wer in the callback.  This is
- replaced by using the model's .List function which calls findAll
- on the model
-
- Todo.findAll({}, function(todos){
-
- var itemsLeft = can.compute(function(){
- var count = 0;
- todos.each(function(todo){
- if(!todo.attr("completed")){
- count++;
- }
- })
- return count;
- })
-
- var frag = can.view("app-template", {
- todos: todos,
- itemsLeft: itemsLeft
- });
-
- $("#app").html(frag);
-
- })*/
 
